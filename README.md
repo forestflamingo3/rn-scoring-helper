@@ -99,3 +99,7 @@ Use this instead of CHANGELOG until more than 3-5 changes, depending on complexi
 2026-07-10
 
 - First doc pass
+
+2026-07-12
+
+- Chore release 0.4 formally. This validates what's on the Club computer. No changes to code.
