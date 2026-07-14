@@ -4,7 +4,7 @@
 
 Regatta Network scoring data entry is fiddly enough without the effects of mice in the workflow, but there it is anyway. One Single Mouse Click in the `Quick Find:` field, so that the keyboard focus goes there and we can type a sail number.
 
-You have to look away from the work, and hope the mouse doesn't jiggle much, and move it back anyway, and then get your right hand back to the numpad for keying in sail numbers and finish times and then look back at the work... It's nuts.
+You have to look away from the work, and hope the mouse doesn't jiggle much when you grab it, and move it back anyway, and then get your right hand back to the numpad for keying in sail numbers and finish times and then look back at the work... It's nuts.
 
 This TamperMonkey script addresses that astonishingly bad bit of UI work, and allows heads-down scoring data entry, like using a "ten-key" style of data entry. 
 
@@ -32,7 +32,7 @@ Duh
 
 ## Security
 
-This script requires the Chrome extension TamperMonkey. That extension can read and rewrite the contents of any page in the browser, and probably more.
+This script uses the Chrome extension TamperMonkey. That extension can read and rewrite the contents of any page in the browser, and probably more.
 
 Execution of scripts is controlled and restricted to defined URLs. This solution's scripting is constrained to just the scoring data entry page.
 
@@ -44,11 +44,11 @@ Execution of scripts is controlled and restricted to defined URLs. This solution
   - Make sure TamperMonkey is enabled
   - Open the TamperMonkey console, then click on Dashboard, a new browser tab will open, this is where scripts are maintained
   - click the `+` tab, a new script editor window will appear within the current browser tab
-  - copy/paste the contents of `rn-scoring-helper.js` into the editor window
+  - copy/paste the contents of `rn-scoring-helper` into the editor window
   - change the name of the script from `<New userscript>` to `rn-scoring-helper`.
   - click `File > Save`, the script is saved to TamperMonkey's browser storage.
 
-- `Dependencies`. TamperMoneky. Chromium-based browser 
+- `Dependencies`. TamperMoneky. Chromium-based browser.
 
 ## Usage
 
