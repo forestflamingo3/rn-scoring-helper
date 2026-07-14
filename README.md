@@ -1,10 +1,22 @@
-# README.md - Regatta Network Scoring Helper script
+# Regatta Network Scoring Helper script
+
+## Short Description
+
+Regatta Network scoring data entry is fiddly enough without the effects of mice in the workflow, but there it is anyway. One Single Mouse Click in the `Quick Find:` field, so that the keyboard focus goes there and we can type a sail number.
+
+You have to look away from the work, and hope the mouse doesn't jiggle much, and move it back anyway, and then get your right hand back to the numpad for keying in sail numbers and finish times and then look back at the work... It's nuts.
+
+This TamperMonkey script addresses that astonishingly bad bit of UI work, and allows heads-down scoring data entry, like using a "ten-key" style of data entry. 
+
+This script ELIMINATES the need to click in the gd `Quick Find:` field in between boats. How? By setting the Focus on the DOM `Pattern1` Field, the first (OK, only) `Quick Find` on the page.
+
+Duh
 
 ## Table of Contents
 
-- [README.md - Regatta Network Scoring Helper script](#readmemd---regatta-network-scoring-helper-script)
-  - [Table of Contents](#table-of-contents)
+- [Regatta Network Scoring Helper script](#regatta-network-scoring-helper-script)
   - [Short Description](#short-description)
+  - [Table of Contents](#table-of-contents)
   - [Security](#security)
   - [Install](#install)
   - [Usage](#usage)
@@ -12,20 +24,15 @@
       - [Enable TamperMoneky](#enable-tampermoneky)
       - [Enable this script](#enable-this-script)
     - [Routine usage](#routine-usage)
-    - [Side effects during cleanup](#side-effects-during-cleanup)
+    - [Side effects during scoring cleanup](#side-effects-during-scoring-cleanup)
   - [Maintainer](#maintainer)
   - [License](#license)
   - [History](#history)
 
-## Short Description
-
-Provide for heads-down scoring data entry, like using a "ten-key". This script ELIMINATES the need to click in the gd `Quick Find:` field in between boats.
-
-Do this by setting the Focus on the `Pattern1` Field, the first (OK, only) `Quick Find` on the page.
 
 ## Security
 
-This script requires the Chrome extension TamperMonkey. That extension can read and rewrite the contents of any page in the browser.
+This script requires the Chrome extension TamperMonkey. That extension can read and rewrite the contents of any page in the browser, and probably more.
 
 Execution of scripts is controlled and restricted to defined URLs. This solution's scripting is constrained to just the scoring data entry page.
 
@@ -41,7 +48,7 @@ Execution of scripts is controlled and restricted to defined URLs. This solution
   - change the name of the script from `<New userscript>` to `rn-scoring-helper`.
   - click `File > Save`, the script is saved to TamperMonkey's browser storage.
 
-- `Dependencies`. TamperMoneky
+- `Dependencies`. TamperMoneky. Chromium-based browser 
 
 ## Usage
 
@@ -60,8 +67,8 @@ Execution of scripts is controlled and restricted to defined URLs. This solution
 
 ### Routine usage
 
-- Make sure TamperMoneky is enabled
-  - leave TamperMonkey enabled or not when done scoring, depending on other usages and your preference
+- Make sure TamperMonkey is enabled
+  - leave the extension enabled or not when done scoring, depending on other usages and your preference
 
 - Make sure the script itself also is enabled
   - leave this script enabled or not when done scoring, depending preference
@@ -76,11 +83,12 @@ Execution of scripts is controlled and restricted to defined URLs. This solution
 
 - Rejoice!
 
-### Side effects during cleanup
+### Side effects during scoring cleanup
 
-- because it keeps dragging the insertion point to `Quick Find:`, working with boats that have already been scored & need editing can be problematic.
-- often, just triple-clicking in the section on the right side of the screen will let the cursor come over, but it doesn't stay.
+- because this script keeps dragging the insertion point to `Quick Find:`, working with boats that have already been scored & need editing can be problematic.
+- often, just triple-clicking in the section on the right side of the screen will let the cursor come over, but it can be unreliable behavior.
 - the best practice is to disable the script while you need random access to the scoing input screen.
+- DO A SAVE SCORES then do a full page reload after disabling the script.
 
 ## Maintainer
 
