@@ -6,7 +6,7 @@ Regatta Network scoring data entry is fiddly enough without the effects of mice 
 
 You have to look away from the work, and hope the mouse doesn't jiggle much when you grab it, and move it back anyway, and then get your right hand back to the numpad for keying in sail numbers and finish times and then look back at the work... It's nuts.
 
-This TamperMonkey script addresses that astonishingly bad bit of UI work, and allows heads-down scoring data entry, like using a "ten-key" style of data entry. 
+This TamperMonkey script addresses that astonishingly bad bit of UI work, and allows heads-down scoring data entry, like using a "ten-key" style of data entry.
 
 This script ELIMINATES the need to click in the gd `Quick Find:` field in between boats. How? By setting the Focus on the DOM `Pattern1` Field, the first (OK, only) `Quick Find` on the page.
 
@@ -29,10 +29,11 @@ Duh
   - [License](#license)
   - [History](#history)
 
-
 ## Security
 
-This script uses the Chrome extension TamperMonkey. That extension can read and rewrite the contents of any page in the browser, and probably more.
+This script uses the Chrome extension TamperMonkey. That extension can read and rewrite the contents of any page in the browser.
+
+I vibecoded this with Gemini. It's been visually reviewed, and validated with non-exhaustive testing.
 
 Execution of scripts is controlled and restricted to defined URLs. This solution's scripting is constrained to just the scoring data entry page.
 
@@ -55,15 +56,17 @@ Execution of scripts is controlled and restricted to defined URLs. This solution
 ### Common tasks
 
 #### Enable TamperMoneky
-  - open the TamperMonkey console (click the extension), 
-  - ensure the Enabled option is green-checked.
+
+- open the TamperMonkey console (click the extension),
+- ensure the Enabled option is green-checked.
 
 #### Enable this script
-  - click the Dashboard, a new browswer tab will open, 
-  - ensure the slide switch for THIS script is green-enabled. 
-  - close the tab
-  - it will execute ONLY for the specific page 
-  - RN scoring URL ` https://www.regattanetwork.com/clubmgmt/mgmt_score_edit_beta.php?*`
+
+- click the Dashboard, a new browswer tab will open,
+- ensure the slide switch for THIS script is green-enabled.
+- close the tab
+- it will execute ONLY for the specific page
+- RN scoring URL `https://www.regattanetwork.com/clubmgmt/mgmt_score_edit_beta.php?*`
 
 ### Routine usage
 
@@ -74,8 +77,8 @@ Execution of scripts is controlled and restricted to defined URLs. This solution
   - leave this script enabled or not when done scoring, depending preference
 
 - Back on the RN screen:
-  - hit shift-f5. 
-  - this forces a reload of the page, injecting it with the script. 
+  - hit shift-f5.
+  - this forces a reload of the page, injecting it with the script.
   - if the script has been enabled all along, then it should have already been injected.
 
 - Commence data entry.
@@ -92,7 +95,7 @@ Execution of scripts is controlled and restricted to defined URLs. This solution
 
 ## Maintainer
 
-- Paul Leonard paul.e.leonard@gmail.com
+- Paul Leonard <paul.e.leonard@gmail.com>
 
 ## License
 
