@@ -133,3 +133,4 @@ Use this instead of CHANGELOG until more than 3-5 changes, depending on complexi
 2026-07-17
 
 - Polish README
+- Publish public repo
