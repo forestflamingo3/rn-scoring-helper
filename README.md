@@ -2,23 +2,29 @@
 
 ## Short Description
 
-Regatta Network scoring data entry is fiddly enough without the effects of mice in the workflow, but there it is anyway. One Single Mouse Click in the `Quick Find:` field, so that the keyboard focus goes there and we can type a sail number.
+This script allows heads-down scoring data entry in Regatta Network, like using a "ten-key" style of data entry.
 
-You have to look away from the work, and hope the mouse doesn't jiggle much when you grab it, and move it back anyway, and then get your right hand back to the numpad for keying in sail numbers and finish times and then look back at the work... It's nuts.
+## Long Description
 
-This TamperMonkey script addresses that astonishingly bad bit of UI work, and allows heads-down scoring data entry, like using a "ten-key" style of data entry.
+Use this script when doing Regatta Network (RN) scoring data entry - you know: click in the `Quick Find` field, key a `sail #`, hit Enter, key `finish time`, hit Enter, **REPEAT**.
 
-This script ELIMINATES the need to click in the gd `Quick Find:` field in between boats. How? By setting the Focus on the DOM `Pattern1` Field, the first (OK, only) `Quick Find` on the page.
+Normally, you have to look away from the work, and hope the mouse doesn't jiggle much when you grab it, and move it back anyway, and then get your right hand back to the numpad for keying in sail numbers and finish times and then look back at the work... It's nuts.
 
-Duh
+This script ELIMINATES the need to click in the g--d--- `Quick Find` field in between boats. How? By setting the Focus on the DOM `Pattern1` Field, the first (OK, only) `Quick Find` on the page.
+
+You get to keep your hands on the keyboard, where they belong.
 
 ## Table of Contents
 
 - [Regatta Network Scoring Helper script](#regatta-network-scoring-helper-script)
   - [Short Description](#short-description)
+  - [Long Description](#long-description)
   - [Table of Contents](#table-of-contents)
   - [Security](#security)
   - [Install](#install)
+    - [References](#references)
+    - [Dependencies](#dependencies)
+    - [Procedure](#procedure)
   - [Usage](#usage)
     - [Common tasks](#common-tasks)
       - [Enable TamperMoneky](#enable-tampermoneky)
@@ -41,6 +47,17 @@ Execution of scripts is controlled and restricted to defined URLs. This solution
 
 ## Install
 
+### References
+
+- Regatta Network - <https://regattanetwork.com>
+- TamperMonkey project - <https://www.tampermonkey.net/>
+
+### Dependencies
+
+- TamperMonkey browser extension - <https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo?hl=en>
+
+### Procedure
+
 - Create a new script in TamperMonkey's storage
   - Make sure TamperMonkey is enabled
   - Open the TamperMonkey console, then click on Dashboard, a new browser tab will open, this is where scripts are maintained
@@ -48,8 +65,6 @@ Execution of scripts is controlled and restricted to defined URLs. This solution
   - copy/paste the contents of `rn-scoring-helper` into the editor window
   - change the name of the script from `<New userscript>` to `rn-scoring-helper`.
   - click `File > Save`, the script is saved to TamperMonkey's browser storage.
-
-- `Dependencies`. TamperMoneky. Chromium-based browser.
 
 ## Usage
 
