@@ -111,6 +111,7 @@ Execution of scripts is controlled and restricted to defined URLs. This solution
 ## Maintainer
 
 - Paul Leonard <paul.e.leonard@gmail.com>
+- This project is maintained primarily for my own use and for the DIYC race committee. Bug reports are welcome, but I am not currently accepting code contributions.
 
 ## License
 
