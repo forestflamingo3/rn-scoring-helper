@@ -37,7 +37,7 @@ You get to keep your hands on the keyboard, where they belong.
 
 ## Security
 
-This script uses the Chrome extension TamperMonkey. That extension can read and rewrite the contents of any page in the browser.
+The magic uses the Chrome extension TamperMonkey. That extension can read and rewrite the contents of any page in the browser.
 
 I vibecoded this with Gemini. It's been visually reviewed, and validated with non-exhaustive testing.
 
