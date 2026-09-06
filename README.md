@@ -193,7 +193,6 @@ const disabledPenaltyCodes = ['BYE', 'RET-BF', 'RET-AF'];
 
 - Regatta Network - <https://regattanetwork.com>
 - TamperMonkey project - <https://www.tampermonkey.net/>
-- This project https://www.github.com/forestflamingo3/rn-scoring-helper
 
 ### Dependencies
 
