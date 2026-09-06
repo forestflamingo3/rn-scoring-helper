@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         rn-scoring-helper
 // @namespace    http://tampermonkey.net/
-// @version      0.6
+// @version      0.7
 // @description  Returns focus to Quick Find, sorts/filters penalty codes, and sets per-code penalty basis defaults.
 // @author       Paul Leonard vibin w Gemini and ChatGPT
 // @match        https://www.regattanetwork.com/clubmgmt/mgmt_score_edit_beta.php?*
@@ -25,6 +25,7 @@
     // C1/C2 = Checkins +1/+2. Only count-based codes below accept overrides.
     const penaltyBasisOverrides = {};
 
+    let autoFocusQuickFind = true; // Startup setting; the page switch can change it.
 
     // The name of the input field to focus on.
     const targetFieldName = 'pattern1';
@@ -109,6 +110,7 @@
         const select = document.querySelector(penaltySelector);
         if (!select) return;
         ensureA53Switch(select);
+        ensureFocusSwitch(select);
 
         const options = Array.from(select.options);
         const selectedOption = options[select.selectedIndex];
@@ -132,42 +134,80 @@
         }
     }
 
-    function attemptFocus() {
-        const inputField = document.querySelector(targetFieldSelector);
-
-        if (inputField) {
-            // Check if the element is visible and not disabled before trying to focus.
-            // This can prevent issues if the field is temporarily hidden or inactive.
-            if (inputField.offsetParent !== null && !inputField.disabled) {
-                // Using setTimeout with 0ms ensures this runs after the current
-                // browser rendering cycle, which can sometimes help with focus issues
-                // especially after dynamic DOM manipulations.
-                setTimeout(() => {
-                    inputField.focus();
-                    console.log(`Focus set on element with name: ${targetFieldName}`);
-                }, 0);
-                return true; // Indicate that focus was successfully attempted
-            } else {
-                console.log(`Element with name "${targetFieldName}" found but not visible or is disabled.`);
+    // Focus only after a completed left-to-right transfer, not arbitrary edits.
+    let focusTimer;
+    function cancelFocus() {
+        clearTimeout(focusTimer);
+    }
+    function queueFocus() {
+        cancelFocus();
+        if (!autoFocusQuickFind) return;
+        focusTimer = setTimeout(() => {
+            const field = document.querySelector(targetFieldSelector);
+            if (autoFocusQuickFind && field?.isConnected && !field.disabled &&
+                field.getClientRects().length && getComputedStyle(field).visibility !== 'hidden') {
+                field.focus();
             }
-        } else {
-            console.log(`Element with name "${targetFieldName}" not yet found.`);
-        }
-        return false; // Indicate that focus was not set
+        }, 0);
+    }
+    // A deliberate interaction after a transfer takes priority over queued focus.
+    for (const event of ['pointerdown', 'keydown', 'focusin']) {
+        document.addEventListener(event, cancelFocus, true);
     }
 
-    // Integration reconstructed for the split: suppress helper-owned mutations.
+    function ensureFocusSwitch(select) {
+        if (document.getElementById('rn-helper-autofocus')) return;
+        const label = document.createElement('label');
+        label.style.cssText = 'display:block; margin:6px 0; font-size:12px;';
+        const toggle = document.createElement('input');
+        toggle.type = 'checkbox';
+        toggle.id = 'rn-helper-autofocus';
+        toggle.checked = autoFocusQuickFind;
+        toggle.addEventListener('change', () => {
+            autoFocusQuickFind = toggle.checked;
+            cancelFocus();
+        });
+        label.append(toggle, ' Auto-focus Quick Find');
+        label.title = 'Return to Quick Find after scoring a boat. Turn off for corrections. Resets on page reload.';
+        (document.getElementById('rn-helper-a53-control') || select).after(label);
+    }
+
+    function listCounts() {
+        const unscored = document.querySelector('select[name="first_list"]');
+        const scored = Array.from(document.querySelectorAll('select[name^="ordered_list_"]'))
+            .filter(select => /^ordered_list_\d+(\[\])?$/.test(select.name));
+        const count = select => Array.from(select.options).filter(option => option.value !== 'temp').length;
+        return unscored && scored.length
+            ? { unscored: count(unscored), scored: scored.reduce((sum, select) => sum + count(select), 0) }
+            : null;
+    }
+    let previousCounts;
     const observer = new MutationObserver(() => {
+        const current = listCounts();
+        if (previousCounts && current && current.scored > previousCounts.scored &&
+            current.unscored < previousCounts.unscored) {
+            queueFocus();
+        } else if (previousCounts && current && current.scored < previousCounts.scored) {
+            cancelFocus();
+        }
+        previousCounts = current;
         observer.disconnect();
-        try { updatePenaltyOptions(); attemptFocus(); }
-        finally { observer.observe(document.body, { childList: true, subtree: true, attributes: true }); }
+        try {
+            updatePenaltyOptions();
+        } finally {
+            observer.observe(document.body, { childList: true, subtree: true });
+        }
     });
     function initialize() {
         updatePenaltyOptions();
-        attemptFocus();
-        observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+        previousCounts = listCounts();
+        observer.observe(document.body, { childList: true, subtree: true });
+        // Initial convenience only when the user has not already focused a field.
+        if (document.activeElement === document.body) queueFocus();
     }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initialize, { once: true });
-    } else { initialize(); }
+    } else {
+        initialize();
+    }
 })();
