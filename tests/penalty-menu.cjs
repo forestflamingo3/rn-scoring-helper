@@ -20,21 +20,24 @@ const { chromium } = require('playwright');
         const read = () => page.locator('#comment').evaluate(select => ({
             value: select.value,
             codes: Array.from(select.options, o => o.value),
-            visible: Array.from(select.options).filter(o => getComputedStyle(o).display !== 'none').map(o => o.value),
+            enabled: Array.from(select.options).filter(o => !o.disabled).map(o => o.value),
             changes: window.changes
         }));
         let state = await read();
+        assert.equal(await page.locator('#comment option').evaluateAll(options =>
+            options.every(option => getComputedStyle(option).display !== 'none')), true);
+        assert.equal(await page.locator('#comment').evaluate(select => getComputedStyle(select).color), 'rgb(36, 93, 143)');
         assert.deepEqual(state.codes, ['', 'ARB', 'BYE', 'CP', 'RET-AF', 'RET-BF', 'ZFP']);
-        assert.deepEqual(state.visible, ['', 'ARB', 'CP', 'RET-BF', 'ZFP']);
+        assert.deepEqual(state.enabled, ['', 'ARB', 'CP', 'RET-BF', 'ZFP']);
         assert.equal(state.value, 'RET-BF');
         assert.equal(state.changes, 0);
         await page.locator('#comment').evaluate(select => { select.value = 'BYE'; });
         state = await read();
-        assert.deepEqual(state.visible, ['', 'ARB', 'BYE', 'CP', 'ZFP']);
+        assert.deepEqual(state.enabled, ['', 'ARB', 'BYE', 'CP', 'ZFP']);
         assert.equal(state.value, 'BYE');
         await page.locator('#comment').selectOption('CP');
         state = await read();
-        assert.deepEqual(state.visible, ['', 'ARB', 'CP', 'ZFP']);
+        assert.deepEqual(state.enabled, ['', 'ARB', 'CP', 'ZFP']);
         assert.equal(state.changes, 1);
         assert.equal(await page.locator('option[value="CP"]').textContent(), 'Custom Penalty');
         await page.locator('#comment').evaluate(select => {
@@ -43,9 +46,9 @@ const { chromium } = require('playwright');
         state = await read();
         assert.deepEqual(state.codes, ['', 'ARB', 'BYE', 'ZFP']);
         assert.equal(state.value, 'BYE');
-        assert.ok(state.visible.includes('BYE'));
+        assert.ok(state.enabled.includes('BYE'));
         await page.locator('#comment').evaluate(select => { select.value = ''; });
-        assert.deepEqual((await read()).visible, ['', 'ARB', 'ZFP']);
+        assert.deepEqual((await read()).enabled, ['', 'ARB', 'ZFP']);
         const script = fs.readFileSync(path.join(__dirname, '../scripts/rn-scoring-helper'), 'utf8');
         const countCodes = ['DNC', 'DNS', 'OCS', 'UFD', 'BFD', 'BFD-DNE', 'NSC', 'DNF', 'RET', 'RET-BF', 'RET-AF', 'DSQ', 'DNE', 'DGM'];
         for (const a53 of [false, true]) {
@@ -92,12 +95,24 @@ const { chromium } = require('playwright');
             await defaultsPage.close();
         }
         const focusPage = await browser.newPage();
-        await focusPage.setContent(`<input name="pattern1"><input id="edit">
+        await focusPage.setContent(`<input name="pattern1"><span id="move-selected"> [<a href="#2">Move Selected</a>]</span><br><input id="edit">
             <select id="comment"><option value="">NONE</option></select>
             <select name="first_list"><option value="a">A</option><option value="b">B</option></select>
             <select name="ordered_list_0"><option value="temp">Placeholder</option></select>`);
         await focusPage.locator('#edit').focus();
         await focusPage.addScriptTag({ content: script });
+        assert.equal(await focusPage.locator('#move-selected').evaluate(link =>
+            link.nextElementSibling.querySelector('input')?.id), 'rn-helper-autofocus');
+        const positions = await focusPage.evaluate(() => {
+            const field = document.querySelector('[name=pattern1]').getBoundingClientRect();
+            const link = document.querySelector('#move-selected').getBoundingClientRect();
+            const toggle = document.querySelector('#rn-helper-autofocus').getBoundingClientRect();
+            return { beside: link.left >= field.right && link.top < field.bottom,
+                below: toggle.top >= field.bottom };
+        });
+        assert.deepEqual(positions, { beside: true, below: true });
+        assert.equal(await focusPage.locator('#rn-helper-autofocus').evaluate(toggle =>
+            getComputedStyle(toggle.parentElement).color), 'rgb(36, 93, 143)');
         const settle = () => focusPage.evaluate(() => new Promise(resolve => setTimeout(resolve, 30)));
         const active = () => focusPage.evaluate(() => document.activeElement.id || document.activeElement.name);
         await settle();

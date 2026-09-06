@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         rn-scoring-helper
 // @namespace    http://tampermonkey.net/
-// @version      0.8
+// @version      0.9
 // @description  Returns focus to Quick Find, sorts/filters penalty codes, and sets per-code penalty basis defaults.
 // @author       Paul Leonard vibin w Gemini and ChatGPT
 // @match        https://www.regattanetwork.com/clubmgmt/mgmt_score_edit_beta.php?*
@@ -26,8 +26,9 @@
     // C1/C2 = Checkins +1/+2. Only count-based codes below accept overrides.
     const penaltyBasisOverrides = {};
 
-    // 3. Penalty menu: codes to hide unless currently selected; [] shows all.
-    const hiddenPenaltyCodes = ['BYE', 'RET-BF', 'RET-AF'];
+    // 3. Penalty menu: exact codes to grey out; [] enables all.
+    // A currently selected code remains enabled to preserve its value.
+    const disabledPenaltyCodes = ['BYE', 'RET-BF', 'RET-AF'];
 
     // ============== INTERNAL PAGE INTEGRATION ==============
     // No configuration needed below this line.
@@ -37,7 +38,33 @@
     // The CSS selector for the target field.
     const targetFieldSelector = `input[name="${targetFieldName}"]`;
 
-    const hiddenCodes = new Set(hiddenPenaltyCodes);
+    const disabledCodes = new Set(disabledPenaltyCodes);
+    const watchedSelection = new WeakSet();
+    const originalDisabled = new WeakMap();
+    function refreshDisabledOptions(select) {
+        for (const option of select.options) {
+            if (!originalDisabled.has(option)) originalDisabled.set(option, option.disabled);
+            const disabled = originalDisabled.get(option) ||
+                (option.value !== '' && disabledCodes.has(option.value) && !option.selected);
+            if (option.disabled !== disabled) option.disabled = disabled;
+        }
+    }
+    function watchSelection(element, properties, select) {
+        if (watchedSelection.has(element)) return;
+        watchedSelection.add(element);
+        for (const property of properties) {
+            const descriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(element), property);
+            if (!descriptor?.get || !descriptor?.set || Object.hasOwn(element, property)) continue;
+            Object.defineProperty(element, property, {
+                configurable: true,
+                get() { return descriptor.get.call(this); },
+                set(value) {
+                    descriptor.set.call(this, value);
+                    refreshDisabledOptions(select);
+                }
+            });
+        }
+    }
     const penaltySelector = 'select#comment';
     const penaltyBasisDefaults = {
         DNC: '', DNS: '', OCS: '', UFD: '', BFD: '', 'BFD-DNE': '',
@@ -76,6 +103,7 @@
     }
     document.addEventListener('change', event => {
         if (event.target.matches?.(penaltySelector)) {
+            refreshDisabledOptions(event.target);
             applyPenaltyBasis(event.target.value);
         }
     });
@@ -104,7 +132,7 @@
         select.after(label);
     }
     const filterStyle = document.createElement('style');
-    // Blue identifies helper controls; retain selected hidden codes.
+    // Blue identifies the helper's controls; disabled options remain readable.
     filterStyle.textContent = `
         .rn-helper-control {
             display: block;
@@ -123,8 +151,15 @@
             vertical-align: middle;
             margin: 0 5px 0 0;
         }
-        select#comment option[data-rn-helper-filtered]:not(:checked) {
-            display: none !important;
+        select#comment {
+            color: #245d8f;
+            background-color: #f0f6fc;
+            border: 1px solid #80acd4;
+            border-radius: 3px;
+        }
+        select#comment option:disabled {
+            color: #888;
+            background-color: #f3f3f3;
         }
     `;
     (document.head || document.documentElement).appendChild(filterStyle);
@@ -144,17 +179,14 @@
             return a.value < b.value ? -1 : 1;
         });
 
-        for (const option of options) {
-            const filtered = option.value !== '' && hiddenCodes.has(option.value);
-            if (option.hasAttribute('data-rn-helper-filtered') !== filtered) {
-                option.toggleAttribute('data-rn-helper-filtered', filtered);
-            }
-        }
+        watchSelection(select, ['value', 'selectedIndex'], select);
+        for (const option of options) watchSelection(option, ['selected'], select);
         if (sorted.some((option, index) => option !== options[index])) {
             // Move the original options, preserving labels and other attributes.
             select.append(...sorted);
             select.selectedIndex = selectedOption ? sorted.indexOf(selectedOption) : -1;
         }
+        refreshDisabledOptions(select);
     }
 
     // Focus only after a completed left-to-right transfer, not arbitrary edits.
