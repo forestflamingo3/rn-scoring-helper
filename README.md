@@ -129,17 +129,20 @@ To configure the filter, edit this line near the top of `scripts/rn-scoring-help
 in the Tampermonkey editor:
 
 ```javascript
-const hiddenPenaltyCodes = ['BYE', 'RET-BF', 'RET-AF'];
+const disabledPenaltyCodes = ['BYE', 'RET-BF', 'RET-AF'];
 ```
 
-Use exact codes, including hyphens. Set the list to `[]` to show all codes.
-Unknown codes are ignored, and `NONE` cannot be hidden. Save the script and reload
+Use exact codes, including hyphens. Set the list to `[]` to enable all codes.
+Unknown codes are ignored, and the helper never disables `NONE`. Save the script and reload
 the scoring page after saving any scores in progress.
 
-A filtered code remains visible whenever it is selected, including when the page
-sets it programmatically. After another code is selected, it is hidden again.
-The filter only hides menu choices; their original values and labels remain
-available to Regatta Network. Sorting and filtering are reapplied if the page
+A filtered code stays visible but greyed out and unavailable for selection.
+If it is already selected, including through a programmatic assignment, the
+helper keeps it enabled to preserve its value. After another code is selected,
+it becomes disabled again. Options disabled by RN itself remain disabled.
+The menu uses subtle blue styling to identify the helper's enhancement.
+Original values and labels remain available to Regatta Network.
+Sorting and filtering are reapplied if the page
 rebuilds the menu, without triggering its penalty-change handler.
 
 ### Common tasks
@@ -182,7 +185,7 @@ into a scored list. Moving boats back, reordering scores, editing penalty fields
 and switching A5.3 do not trigger focus. On initial load, Quick Find receives
 focus only if another control does not already have it.
 
-Uncheck **Auto-focus Quick Find** beside the A5.3 switch for extended corrections.
+Uncheck **Auto-focus Quick Find** underneath Quick Find for extended corrections.
 Check it again to resume heads-down scoring. Changing the switch does not itself
 move focus. The setting survives menu rebuilding and resets on page reload;
 edit `autoFocusQuickFind` near the top of the script to change its startup value.
@@ -205,6 +208,16 @@ UNLICENSED.
 ## History
 
 Use this instead of CHANGELOG until more than 3-5 changes, depending on complexity.
+
+2026-09-06
+
+- Version 0.9: blue penalty menu styling; configured codes are visible but
+  disabled instead of hidden. Rename the setting to `disabledPenaltyCodes`.
+
+2026-09-06
+
+- Version 0.8: move the focus switch underneath Quick Find, give helper controls
+  a subtle blue treatment, and group user settings separately from internal code.
 
 2026-09-06
 

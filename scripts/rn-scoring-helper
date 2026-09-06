@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         rn-scoring-helper
 // @namespace    http://tampermonkey.net/
-// @version      0.7
+// @version      0.9
 // @description  Returns focus to Quick Find, sorts/filters penalty codes, and sets per-code penalty basis defaults.
 // @author       Paul Leonard vibin w Gemini and ChatGPT
 // @match        https://www.regattanetwork.com/clubmgmt/mgmt_score_edit_beta.php?*
@@ -11,11 +11,12 @@
 (function() {
     'use strict';
 
-    // --- Configuration ---
-    // Hide these codes in Add Penalty/Comment, unless currently selected.
-    // Use the actual option values, not their displayed descriptions. [] shows all.
-    const hiddenPenaltyCodes = ['BYE', 'RET-BF', 'RET-AF'];
+    // ================= USER SETTINGS =================
+    // These are startup defaults. Page checkboxes reset to them on reload.
+    // 1. Keyboard entry
+    let autoFocusQuickFind = true;
 
+    // 2. Scoring defaults
     // Enable only when the NOR/SIs invoke A5.3 and RN check-ins represent boats
     // that came to the starting area. This sets defaults, not scoring rules.
     let useAppendixA53 = false;
@@ -25,14 +26,45 @@
     // C1/C2 = Checkins +1/+2. Only count-based codes below accept overrides.
     const penaltyBasisOverrides = {};
 
-    let autoFocusQuickFind = true; // Startup setting; the page switch can change it.
+    // 3. Penalty menu: exact codes to grey out; [] enables all.
+    // A currently selected code remains enabled to preserve its value.
+    const disabledPenaltyCodes = ['BYE', 'RET-BF', 'RET-AF'];
+
+    // ============== INTERNAL PAGE INTEGRATION ==============
+    // No configuration needed below this line.
 
     // The name of the input field to focus on.
     const targetFieldName = 'pattern1';
     // The CSS selector for the target field.
     const targetFieldSelector = `input[name="${targetFieldName}"]`;
 
-    const hiddenCodes = new Set(hiddenPenaltyCodes);
+    const disabledCodes = new Set(disabledPenaltyCodes);
+    const watchedSelection = new WeakSet();
+    const originalDisabled = new WeakMap();
+    function refreshDisabledOptions(select) {
+        for (const option of select.options) {
+            if (!originalDisabled.has(option)) originalDisabled.set(option, option.disabled);
+            const disabled = originalDisabled.get(option) ||
+                (option.value !== '' && disabledCodes.has(option.value) && !option.selected);
+            if (option.disabled !== disabled) option.disabled = disabled;
+        }
+    }
+    function watchSelection(element, properties, select) {
+        if (watchedSelection.has(element)) return;
+        watchedSelection.add(element);
+        for (const property of properties) {
+            const descriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(element), property);
+            if (!descriptor?.get || !descriptor?.set || Object.hasOwn(element, property)) continue;
+            Object.defineProperty(element, property, {
+                configurable: true,
+                get() { return descriptor.get.call(this); },
+                set(value) {
+                    descriptor.set.call(this, value);
+                    refreshDisabledOptions(select);
+                }
+            });
+        }
+    }
     const penaltySelector = 'select#comment';
     const penaltyBasisDefaults = {
         DNC: '', DNS: '', OCS: '', UFD: '', BFD: '', 'BFD-DNE': '',
@@ -70,14 +102,17 @@
         }
     }
     document.addEventListener('change', event => {
-        if (event.target.matches?.(penaltySelector)) applyPenaltyBasis(event.target.value);
+        if (event.target.matches?.(penaltySelector)) {
+            refreshDisabledOptions(event.target);
+            applyPenaltyBasis(event.target.value);
+        }
     });
 
     function ensureA53Switch(select) {
         if (document.getElementById('rn-helper-a53')) return;
         const label = document.createElement('label');
         label.id = 'rn-helper-a53-control';
-        label.style.cssText = 'display:block; margin:6px 0; font-size:12px;';
+        label.className = 'rn-helper-control';
         label.title = 'Use only when the NOR/SIs invoke A5.3 and check-ins represent boats at the starting area. Per-code overrides still apply. Resets on page reload.';
         const toggle = document.createElement('input');
         toggle.type = 'checkbox';
@@ -97,20 +132,43 @@
         select.after(label);
     }
     const filterStyle = document.createElement('style');
-    // Keep the options in the DOM so RN can still assign an existing code by value.
-    // :checked responds immediately even to programmatic selection without events.
+    // Blue identifies the helper's controls; disabled options remain readable.
     filterStyle.textContent = `
-        select#comment option[data-rn-helper-filtered]:not(:checked) {
-            display: none !important;
+        .rn-helper-control {
+            display: block;
+            width: fit-content;
+            margin: 5px 0;
+            padding: 3px 7px;
+            border-left: 2px solid #80acd4;
+            border-radius: 3px;
+            background: #f0f6fc;
+            color: #245d8f;
+            font: normal 12px/1.5 Arial, sans-serif;
+            cursor: pointer;
+        }
+        .rn-helper-control input[type="checkbox"] {
+            accent-color: #3276b1;
+            vertical-align: middle;
+            margin: 0 5px 0 0;
+        }
+        select#comment {
+            color: #245d8f;
+            background-color: #f0f6fc;
+            border: 1px solid #80acd4;
+            border-radius: 3px;
+        }
+        select#comment option:disabled {
+            color: #888;
+            background-color: #f3f3f3;
         }
     `;
     (document.head || document.documentElement).appendChild(filterStyle);
 
     function updatePenaltyOptions() {
+        ensureFocusSwitch();
         const select = document.querySelector(penaltySelector);
         if (!select) return;
         ensureA53Switch(select);
-        ensureFocusSwitch(select);
 
         const options = Array.from(select.options);
         const selectedOption = options[select.selectedIndex];
@@ -121,17 +179,14 @@
             return a.value < b.value ? -1 : 1;
         });
 
-        for (const option of options) {
-            const filtered = option.value !== '' && hiddenCodes.has(option.value);
-            if (option.hasAttribute('data-rn-helper-filtered') !== filtered) {
-                option.toggleAttribute('data-rn-helper-filtered', filtered);
-            }
-        }
+        watchSelection(select, ['value', 'selectedIndex'], select);
+        for (const option of options) watchSelection(option, ['selected'], select);
         if (sorted.some((option, index) => option !== options[index])) {
             // Move the original options, preserving labels and other attributes.
             select.append(...sorted);
             select.selectedIndex = selectedOption ? sorted.indexOf(selectedOption) : -1;
         }
+        refreshDisabledOptions(select);
     }
 
     // Focus only after a completed left-to-right transfer, not arbitrary edits.
@@ -155,10 +210,20 @@
         document.addEventListener(event, cancelFocus, true);
     }
 
-    function ensureFocusSwitch(select) {
-        if (document.getElementById('rn-helper-autofocus')) return;
+    function ensureFocusSwitch() {
+        const field = document.querySelector(targetFieldSelector);
+        if (!field) return;
+        // Keep RN's inline Move Selected link on the input's original line.
+        const next = field.nextElementSibling;
+        const anchor = next?.matches('span') && next.querySelector('a');
+        const placement = anchor && anchor.textContent.trim() === 'Move Selected' ? next : field;
+        const existing = document.getElementById('rn-helper-autofocus');
+        if (existing) {
+            if (placement.nextElementSibling !== existing.parentElement) placement.after(existing.parentElement);
+            return;
+        }
         const label = document.createElement('label');
-        label.style.cssText = 'display:block; margin:6px 0; font-size:12px;';
+        label.className = 'rn-helper-control';
         const toggle = document.createElement('input');
         toggle.type = 'checkbox';
         toggle.id = 'rn-helper-autofocus';
@@ -169,7 +234,7 @@
         });
         label.append(toggle, ' Auto-focus Quick Find');
         label.title = 'Return to Quick Find after scoring a boat. Turn off for corrections. Resets on page reload.';
-        (document.getElementById('rn-helper-a53-control') || select).after(label);
+        placement.after(label);
     }
 
     function listCounts() {
