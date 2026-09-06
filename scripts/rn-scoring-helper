@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         rn-scoring-helper
 // @namespace    http://tampermonkey.net/
-// @version      0.4
-// @description  Sets focus on the 'pattern1' (`Quick Find:`) field on RegattaNetwork's score edit page when it becomes available or a boat is moved.
-// @author       Paul Leonard vibin w Gemini
+// @version      0.7
+// @description  Returns focus to Quick Find, sorts/filters penalty codes, and sets per-code penalty basis defaults.
+// @author       Paul Leonard vibin w Gemini and ChatGPT
 // @match        https://www.regattanetwork.com/clubmgmt/mgmt_score_edit_beta.php?*
 // @grant        none
 // ==/UserScript==
@@ -11,82 +11,203 @@
 (function() {
     'use strict';
 
-    // Your code here
-
     // --- Configuration ---
+    // Hide these codes in Add Penalty/Comment, unless currently selected.
+    // Use the actual option values, not their displayed descriptions. [] shows all.
+    const hiddenPenaltyCodes = ['BYE', 'RET-BF', 'RET-AF'];
+
+    // Enable only when the NOR/SIs invoke A5.3 and RN check-ins represent boats
+    // that came to the starting area. This sets defaults, not scoring rules.
+    let useAppendixA53 = false;
+    // Optional per-code overrides, applied AFTER the preset. Examples:
+    // DNF: 'F1', DNS: 'C1', DNC: ''
+    // '' = Competitors +1; F1/F2/F3 = Finishers +1/+2/+3;
+    // C1/C2 = Checkins +1/+2. Only count-based codes below accept overrides.
+    const penaltyBasisOverrides = {};
+
+    let autoFocusQuickFind = true; // Startup setting; the page switch can change it.
+
     // The name of the input field to focus on.
     const targetFieldName = 'pattern1';
     // The CSS selector for the target field.
     const targetFieldSelector = `input[name="${targetFieldName}"]`;
 
-    // --- Script Logic ---
-
-    /**
-     * Attempts to set focus on the target field.
-     * Logs a message to the console indicating success or failure.
-     */
-    function attemptFocus() {
-        const inputField = document.querySelector(targetFieldSelector);
-
-        if (inputField) {
-            // Check if the element is visible and not disabled before trying to focus.
-            // This can prevent issues if the field is temporarily hidden or inactive.
-            if (inputField.offsetParent !== null && !inputField.disabled) {
-                // Using setTimeout with 0ms ensures this runs after the current
-                // browser rendering cycle, which can sometimes help with focus issues
-                // especially after dynamic DOM manipulations.
-                setTimeout(() => {
-                    inputField.focus();
-                    console.log(`Focus set on element with name: ${targetFieldName}`);
-                }, 0);
-                return true; // Indicate that focus was successfully attempted
-            } else {
-                console.log(`Element with name "${targetFieldName}" found but not visible or is disabled.`);
-            }
-        } else {
-            console.log(`Element with name "${targetFieldName}" not yet found.`);
+    const hiddenCodes = new Set(hiddenPenaltyCodes);
+    const penaltySelector = 'select#comment';
+    const penaltyBasisDefaults = {
+        DNC: '', DNS: '', OCS: '', UFD: '', BFD: '', 'BFD-DNE': '',
+        NSC: '', DNF: '', RET: '', 'RET-BF': '', 'RET-AF': '',
+        DSQ: '', DNE: '', DGM: ''
+    };
+    if (useAppendixA53) {
+        for (const code of Object.keys(penaltyBasisDefaults)) {
+            if (code !== 'DNC') penaltyBasisDefaults[code] = 'C1';
         }
-        return false; // Indicate that focus was not set
+    }
+    const validBases = new Set(['', 'F1', 'F2', 'F3', 'C1', 'C2']);
+    for (const [code, basis] of Object.entries(penaltyBasisOverrides)) {
+        if (Object.hasOwn(penaltyBasisDefaults, code) && validBases.has(basis)) {
+            penaltyBasisDefaults[code] = basis;
+        } else {
+            console.warn('RN helper: ignored invalid penalty basis override:', code, basis);
+        }
     }
 
-    // --- Initial Focus Attempt (on page load) ---
-    // Try to set focus as soon as the DOM is ready.
-    document.addEventListener('DOMContentLoaded', () => {
-        console.log('DOMContentLoaded fired. Attempting initial focus...');
-        attemptFocus();
+    // Bubble after RN's inline checkPenalty() handler. Apply only on code
+    // selection, never during DOM refreshes, so manual basis edits survive.
+    // Delegation also handles replacement menus. Programmatic callers can
+    // dispatch a bubbling change event when starting a new penalty entry.
+    function applyPenaltyBasis(code) {
+        const basisField = document.querySelector('select[name="penalty_basis"]');
+        if (!basisField) return;
+        // Clear stale hidden bases for NONE and codes using other inputs.
+        const basis = Object.hasOwn(penaltyBasisDefaults, code) ? penaltyBasisDefaults[code] : '';
+        if (Array.from(basisField.options).some(option => option.value === basis && !option.disabled)) {
+            basisField.value = basis;
+        } else {
+            basisField.value = '';
+            console.warn('RN helper: configured penalty basis unavailable:', code, basis);
+        }
+    }
+    document.addEventListener('change', event => {
+        if (event.target.matches?.(penaltySelector)) applyPenaltyBasis(event.target.value);
     });
 
-    // --- Dynamic Focus with MutationObserver ---
-    // This observer will watch for changes in the DOM, which is crucial for
-    // detecting when a new boat has been moved or the relevant part of the page updates.
-    const observer = new MutationObserver((mutationsList, observer) => {
-        // Iterate over all detected mutations
-        for (const mutation of mutationsList) {
-            // Check if nodes were added or attributes changed (e.g., visibility)
-            if (mutation.type === 'childList' || mutation.type === 'attributes') {
-                // Attempt to set focus. If successful, we can disconnect the observer
-                // if we only need to focus once per dynamic change.
-                // If the page re-renders the field multiple times, keep the observer connected.
-                console.log('DOM changed. Re-attempting focus...');
-                if (attemptFocus()) {
-                    // If you only want to focus once after the field appears or is manipulated,
-                    // you can disconnect the observer here:
-                    // observer.disconnect();
-                    // console.log('Observer disconnected after successful focus.');
-                }
-                // For RegattaNetwork, it's likely the field might be re-enabled/re-rendered
-                // multiple times as you move between boats, so keeping the observer active
-                // might be beneficial.
+    function ensureA53Switch(select) {
+        if (document.getElementById('rn-helper-a53')) return;
+        const label = document.createElement('label');
+        label.id = 'rn-helper-a53-control';
+        label.style.cssText = 'display:block; margin:6px 0; font-size:12px;';
+        label.title = 'Use only when the NOR/SIs invoke A5.3 and check-ins represent boats at the starting area. Per-code overrides still apply. Resets on page reload.';
+        const toggle = document.createElement('input');
+        toggle.type = 'checkbox';
+        toggle.id = 'rn-helper-a53';
+        toggle.checked = useAppendixA53;
+        toggle.addEventListener('change', () => {
+            useAppendixA53 = toggle.checked;
+            for (const code of Object.keys(penaltyBasisDefaults)) {
+                penaltyBasisDefaults[code] = Object.hasOwn(penaltyBasisOverrides, code) && validBases.has(penaltyBasisOverrides[code])
+                    ? penaltyBasisOverrides[code]
+                    : useAppendixA53 && code !== 'DNC' ? 'C1' : '';
+            }
+            const current = document.querySelector(penaltySelector);
+            if (current) applyPenaltyBasis(current.value);
+        });
+        label.append(toggle, ' Use A5.3 defaults');
+        select.after(label);
+    }
+    const filterStyle = document.createElement('style');
+    // Keep the options in the DOM so RN can still assign an existing code by value.
+    // :checked responds immediately even to programmatic selection without events.
+    filterStyle.textContent = `
+        select#comment option[data-rn-helper-filtered]:not(:checked) {
+            display: none !important;
+        }
+    `;
+    (document.head || document.documentElement).appendChild(filterStyle);
+
+    function updatePenaltyOptions() {
+        const select = document.querySelector(penaltySelector);
+        if (!select) return;
+        ensureA53Switch(select);
+        ensureFocusSwitch(select);
+
+        const options = Array.from(select.options);
+        const selectedOption = options[select.selectedIndex];
+        const sorted = options.slice().sort((a, b) => {
+            if (a.value === b.value) return 0;
+            if (a.value === '') return -1; // NONE always first.
+            if (b.value === '') return 1;
+            return a.value < b.value ? -1 : 1;
+        });
+
+        for (const option of options) {
+            const filtered = option.value !== '' && hiddenCodes.has(option.value);
+            if (option.hasAttribute('data-rn-helper-filtered') !== filtered) {
+                option.toggleAttribute('data-rn-helper-filtered', filtered);
             }
         }
+        if (sorted.some((option, index) => option !== options[index])) {
+            // Move the original options, preserving labels and other attributes.
+            select.append(...sorted);
+            select.selectedIndex = selectedOption ? sorted.indexOf(selectedOption) : -1;
+        }
+    }
+
+    // Focus only after a completed left-to-right transfer, not arbitrary edits.
+    let focusTimer;
+    function cancelFocus() {
+        clearTimeout(focusTimer);
+    }
+    function queueFocus() {
+        cancelFocus();
+        if (!autoFocusQuickFind) return;
+        focusTimer = setTimeout(() => {
+            const field = document.querySelector(targetFieldSelector);
+            if (autoFocusQuickFind && field?.isConnected && !field.disabled &&
+                field.getClientRects().length && getComputedStyle(field).visibility !== 'hidden') {
+                field.focus();
+            }
+        }, 0);
+    }
+    // A deliberate interaction after a transfer takes priority over queued focus.
+    for (const event of ['pointerdown', 'keydown', 'focusin']) {
+        document.addEventListener(event, cancelFocus, true);
+    }
+
+    function ensureFocusSwitch(select) {
+        if (document.getElementById('rn-helper-autofocus')) return;
+        const label = document.createElement('label');
+        label.style.cssText = 'display:block; margin:6px 0; font-size:12px;';
+        const toggle = document.createElement('input');
+        toggle.type = 'checkbox';
+        toggle.id = 'rn-helper-autofocus';
+        toggle.checked = autoFocusQuickFind;
+        toggle.addEventListener('change', () => {
+            autoFocusQuickFind = toggle.checked;
+            cancelFocus();
+        });
+        label.append(toggle, ' Auto-focus Quick Find');
+        label.title = 'Return to Quick Find after scoring a boat. Turn off for corrections. Resets on page reload.';
+        (document.getElementById('rn-helper-a53-control') || select).after(label);
+    }
+
+    function listCounts() {
+        const unscored = document.querySelector('select[name="first_list"]');
+        const scored = Array.from(document.querySelectorAll('select[name^="ordered_list_"]'))
+            .filter(select => /^ordered_list_\d+(\[\])?$/.test(select.name));
+        const count = select => Array.from(select.options).filter(option => option.value !== 'temp').length;
+        return unscored && scored.length
+            ? { unscored: count(unscored), scored: scored.reduce((sum, select) => sum + count(select), 0) }
+            : null;
+    }
+    let previousCounts;
+    const observer = new MutationObserver(() => {
+        const current = listCounts();
+        if (previousCounts && current && current.scored > previousCounts.scored &&
+            current.unscored < previousCounts.unscored) {
+            queueFocus();
+        } else if (previousCounts && current && current.scored < previousCounts.scored) {
+            cancelFocus();
+        }
+        previousCounts = current;
+        observer.disconnect();
+        try {
+            updatePenaltyOptions();
+        } finally {
+            observer.observe(document.body, { childList: true, subtree: true });
+        }
     });
-
-    // Start observing the document body for changes.
-    // 'childList': observe direct children additions/removals.
-    // 'subtree': observe changes in the entire subtree of the body.
-    // 'attributes': observe changes to attributes (like 'style' or 'disabled').
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true });
-
-    console.log('Tampermonkey script initialized and observing DOM changes.');
-
+    function initialize() {
+        updatePenaltyOptions();
+        previousCounts = listCounts();
+        observer.observe(document.body, { childList: true, subtree: true });
+        // Initial convenience only when the user has not already focused a field.
+        if (document.activeElement === document.body) queueFocus();
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initialize, { once: true });
+    } else {
+        initialize();
+    }
 })();
