@@ -139,3 +139,7 @@ Use this instead of CHANGELOG until more than 3-5 changes, depending on complexi
 ## v0.5 penalty menu
 
 Sort actual codes with NONE first; hide configured codes except the selected code. Defaults: BYE, RET-BF, RET-AF. Preserve RN option values and labels and reapply after menu replacement.
+
+## v0.6 penalty defaults
+
+Reset basis on code selection, preserve manual edits during page refreshes, clear stale hidden bases, and add the Use A5.3 defaults switch and validated per-code overrides. The preset changes entry defaults only.
