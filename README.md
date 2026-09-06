@@ -10,7 +10,7 @@ Use this script when doing Regatta Network (RN) scoring data entry - you know: c
 
 Normally, you have to look away from the work, and hope the mouse doesn't jiggle much when you grab it, and move it back anyway, and then get your right hand back to the numpad for keying in sail numbers and finish times and then look back at the work... It's nuts.
 
-This script ELIMINATES the need to click in the g--d--- `Quick Find` field in between boats. How? By setting the Focus on the DOM `Pattern1` Field, the first (OK, only) `Quick Find` on the page.
+This script ELIMINATES the need to click in the g--d--- `Quick Find` field in between boats. How? By setting the Focus on the DOM `Pattern1` Field, the first `Quick Find` on the page.
 
 You get to keep your hands on the keyboard, where they belong.
 
