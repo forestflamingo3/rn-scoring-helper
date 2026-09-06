@@ -21,24 +21,25 @@ Penalty codes defaults can be modified by activating RRS A5.3 support, and can b
 A bug in RN penalty code defaults where it always used the previous penalty rather than whatever was correct for the code is fixed as a side effect.
 
 # Table of Contents
-- [[#Security|Security]]
-- [[#Usage|Usage]]
-	- [[#Usage#Enable TamperMoneky|Enable TamperMoneky]]
-	- [[#Usage#Enable this script|Enable this script]]
-- [[#Features|Features]]
-	- [[#Features#Feature List|Feature List]]
-	- [[#Features#Usability improvements|Usability improvements]]
-	- [[#Features#Improved focus setting during scoring and corrections|Improved focus setting during scoring and corrections]]
-	- [[#Features#Onscreen control to toggle focus setting|Onscreen control to toggle focus setting]]
-	- [[#Features#Per-code penalty basis defaults|Per-code penalty basis defaults]]
-	- [[#Features#Penalty code filter|Penalty code filter]]
-- [[#Install|Install]]
-	- [[#Install#References|References]]
-	- [[#Install#Dependencies|Dependencies]]
-	- [[#Install#Procedure|Procedure]]
-- [[#Maintainer|Maintainer]]
-- [[#License|License]]
-- [[#History|History]]
+- [Security](#security)
+- [Usage](#usage)
+	- [Enable TamperMoneky](#enable-tampermoneky)
+	- [Enable this script](#enable-this-script)
+- [Features](#features)
+	- [Feature List](#feature-list)
+	- [Usability improvements](#usability-improvements)
+	- [Improved focus setting during scoring and corrections](#improved-focus-setting-during-scoring-and-corrections)
+	- [Onscreen control to toggle focus setting](#onscreen-control-to-toggle-focus-setting)
+	- [Per-code penalty basis defaults](#per-code-penalty-basis-defaults)
+	- [Penalty code filter](#penalty-code-filter)
+- [Install](#install)
+	- [References](#references)
+	- [Dependencies](#dependencies)
+	- [Procedure](#procedure)
+- [Maintainer](#maintainer)
+- [License](#license)
+- [History](#history)
+
 
 
 ## Security
