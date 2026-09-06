@@ -135,3 +135,7 @@ Use this instead of CHANGELOG until more than 3-5 changes, depending on complexi
 
 - Polish README
 - Publish public repo
+
+## v0.5 penalty menu
+
+Sort actual codes with NONE first; hide configured codes except the selected code. Defaults: BYE, RET-BF, RET-AF. Preserve RN option values and labels and reapply after menu replacement.

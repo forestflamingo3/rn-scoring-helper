@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         rn-scoring-helper
 // @namespace    http://tampermonkey.net/
-// @version      0.4
-// @description  Sets focus on the 'pattern1' (`Quick Find:`) field on RegattaNetwork's score edit page when it becomes available or a boat is moved.
-// @author       Paul Leonard vibin w Gemini
+// @version      0.5
+// @description  Returns focus to Quick Find and sorts/filters penalty codes.
+// @author       Paul Leonard vibin w Gemini and ChatGPT
 // @match        https://www.regattanetwork.com/clubmgmt/mgmt_score_edit_beta.php?*
 // @grant        none
 // ==/UserScript==
@@ -11,20 +11,54 @@
 (function() {
     'use strict';
 
-    // Your code here
-
     // --- Configuration ---
+    // Hide these codes in Add Penalty/Comment, unless currently selected.
+    // Use the actual option values, not their displayed descriptions. [] shows all.
+    const hiddenPenaltyCodes = ['BYE', 'RET-BF', 'RET-AF'];
+
     // The name of the input field to focus on.
     const targetFieldName = 'pattern1';
     // The CSS selector for the target field.
     const targetFieldSelector = `input[name="${targetFieldName}"]`;
 
-    // --- Script Logic ---
+    const hiddenCodes = new Set(hiddenPenaltyCodes);
+    const penaltySelector = 'select#comment';
+    const filterStyle = document.createElement('style');
+    // Keep the options in the DOM so RN can still assign an existing code by value.
+    // :checked responds immediately even to programmatic selection without events.
+    filterStyle.textContent = `
+        select#comment option[data-rn-helper-filtered]:not(:checked) {
+            display: none !important;
+        }
+    `;
+    (document.head || document.documentElement).appendChild(filterStyle);
 
-    /**
-     * Attempts to set focus on the target field.
-     * Logs a message to the console indicating success or failure.
-     */
+    function updatePenaltyOptions() {
+        const select = document.querySelector(penaltySelector);
+        if (!select) return;
+
+        const options = Array.from(select.options);
+        const selectedOption = options[select.selectedIndex];
+        const sorted = options.slice().sort((a, b) => {
+            if (a.value === b.value) return 0;
+            if (a.value === '') return -1; // NONE always first.
+            if (b.value === '') return 1;
+            return a.value < b.value ? -1 : 1;
+        });
+
+        for (const option of options) {
+            const filtered = option.value !== '' && hiddenCodes.has(option.value);
+            if (option.hasAttribute('data-rn-helper-filtered') !== filtered) {
+                option.toggleAttribute('data-rn-helper-filtered', filtered);
+            }
+        }
+        if (sorted.some((option, index) => option !== options[index])) {
+            // Move the original options, preserving labels and other attributes.
+            select.append(...sorted);
+            select.selectedIndex = selectedOption ? sorted.indexOf(selectedOption) : -1;
+        }
+    }
+
     function attemptFocus() {
         const inputField = document.querySelector(targetFieldSelector);
 
@@ -49,44 +83,18 @@
         return false; // Indicate that focus was not set
     }
 
-    // --- Initial Focus Attempt (on page load) ---
-    // Try to set focus as soon as the DOM is ready.
-    document.addEventListener('DOMContentLoaded', () => {
-        console.log('DOMContentLoaded fired. Attempting initial focus...');
+    // Integration reconstructed for the split: suppress helper-owned mutations.
+    const observer = new MutationObserver(() => {
+        observer.disconnect();
+        try { updatePenaltyOptions(); attemptFocus(); }
+        finally { observer.observe(document.body, { childList: true, subtree: true, attributes: true }); }
+    });
+    function initialize() {
+        updatePenaltyOptions();
         attemptFocus();
-    });
-
-    // --- Dynamic Focus with MutationObserver ---
-    // This observer will watch for changes in the DOM, which is crucial for
-    // detecting when a new boat has been moved or the relevant part of the page updates.
-    const observer = new MutationObserver((mutationsList, observer) => {
-        // Iterate over all detected mutations
-        for (const mutation of mutationsList) {
-            // Check if nodes were added or attributes changed (e.g., visibility)
-            if (mutation.type === 'childList' || mutation.type === 'attributes') {
-                // Attempt to set focus. If successful, we can disconnect the observer
-                // if we only need to focus once per dynamic change.
-                // If the page re-renders the field multiple times, keep the observer connected.
-                console.log('DOM changed. Re-attempting focus...');
-                if (attemptFocus()) {
-                    // If you only want to focus once after the field appears or is manipulated,
-                    // you can disconnect the observer here:
-                    // observer.disconnect();
-                    // console.log('Observer disconnected after successful focus.');
-                }
-                // For RegattaNetwork, it's likely the field might be re-enabled/re-rendered
-                // multiple times as you move between boats, so keeping the observer active
-                // might be beneficial.
-            }
-        }
-    });
-
-    // Start observing the document body for changes.
-    // 'childList': observe direct children additions/removals.
-    // 'subtree': observe changes in the entire subtree of the body.
-    // 'attributes': observe changes to attributes (like 'style' or 'disabled').
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true });
-
-    console.log('Tampermonkey script initialized and observing DOM changes.');
-
+        observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initialize, { once: true });
+    } else { initialize(); }
 })();
