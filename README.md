@@ -233,3 +233,7 @@ Use this instead of CHANGELOG until more than 3-5 changes, depending on complexi
 
 - Polish README
 - Publish public repo
+
+## v0.8 helper controls
+
+Place the autofocus switch beneath Quick Find while preserving the inline Move Selected link. Highlight helper switches in blue and group user settings. Penalty choices still use v0.7 hiding behavior.
