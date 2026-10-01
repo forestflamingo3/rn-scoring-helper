@@ -115,11 +115,13 @@ Version 0.7 returns focus to Quick Find after a boat moves from the unscored lis
 
 ### Onscreen control to toggle focus setting
 
+Saved switch choices are local to this browser and RN origin; they do not follow you to another browser or computer. Clearing site storage resets them to the script defaults. If storage is unavailable, switches still work for the current page, but cannot persist across reloads.
+
 - Uncheck **Auto-focus Quick Find** underneath Quick Find for extended corrections. 
 - Check it again to resume heads-down scoring. 
 - Changing the switch does not itself move focus. 
-- The setting survives menu rebuilding and resets on page reload 
-- Edit `autoFocusQuickFind` near the top of the script to change its startup value.
+- The setting survives menu rebuilding and page reloads in this browser. It is shared across RN scoring pages on the same origin.
+- Edit `autoFocusQuickFind` near the top of the script to change its first-use default; a saved checkbox choice takes precedence.
 
 ### Per-code penalty basis defaults
 
@@ -135,8 +137,8 @@ The **Use A5.3 defaults** checkbox beside the penalty menu switches the preset (
 on or off. 
 - Toggling it immediately resets the current code's basis, including any manual basis choice.
 - Configured per-code overrides still win. 
-- The checkbox starts **off** and resets on page reload, so look at it after a save
-- edit `useAppendixA53` to change its startup setting. 
+- The checkbox starts **off** on first use and remembers your choice across saves and page reloads in this browser. The choice is shared across RN scoring pages on the same origin.
+- Edit `useAppendixA53` to change its first-use default; a saved checkbox choice takes precedence.
 - The current switch state survives dynamic replacement of the menu.
 
 Configure these settings near the top of the script:
@@ -219,6 +221,10 @@ UNLICENSED.
 ---
 
 ## History
+
+2026-10-01
+
+- Version 0.10: remember A5.3 and Auto-focus Quick Find checkbox choices across saves and page reloads using browser storage. First-use defaults remain A5.3 off and autofocus on.
 
 Use this instead of CHANGELOG until more than 3-5 changes, depending on complexity.
 

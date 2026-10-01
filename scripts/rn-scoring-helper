@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         rn-scoring-helper
 // @namespace    http://tampermonkey.net/
-// @version      0.9
+// @version      0.10
 // @description  Returns focus to Quick Find, sorts/filters penalty codes, and sets per-code penalty basis defaults.
 // @author       Paul Leonard vibin w Gemini and ChatGPT
 // @match        https://www.regattanetwork.com/clubmgmt/mgmt_score_edit_beta.php?*
@@ -12,7 +12,7 @@
     'use strict';
 
     // ================= USER SETTINGS =================
-    // These are startup defaults. Page checkboxes reset to them on reload.
+    // These are first-use defaults. Saved checkbox choices override them on reload.
     // 1. Keyboard entry
     let autoFocusQuickFind = true;
 
@@ -32,6 +32,25 @@
 
     // ============== INTERNAL PAGE INTEGRATION ==============
     // No configuration needed below this line.
+
+    // Remember explicit choices in this browser on the RN origin.
+    function readSetting(name, fallback) {
+        try {
+            const value = localStorage.getItem(`rn-scoring-helper.${name}`);
+            return value === 'true' ? true : value === 'false' ? false : fallback;
+        } catch {
+            return fallback;
+        }
+    }
+    function saveSetting(name, value) {
+        try {
+            localStorage.setItem(`rn-scoring-helper.${name}`, String(value));
+        } catch {
+            console.warn('RN helper: unable to save checkbox preference:', name);
+        }
+    }
+    autoFocusQuickFind = readSetting('autoFocusQuickFind', autoFocusQuickFind);
+    useAppendixA53 = readSetting('useAppendixA53', useAppendixA53);
 
     // The name of the input field to focus on.
     const targetFieldName = 'pattern1';
@@ -113,13 +132,14 @@
         const label = document.createElement('label');
         label.id = 'rn-helper-a53-control';
         label.className = 'rn-helper-control';
-        label.title = 'Use only when the NOR/SIs invoke A5.3 and check-ins represent boats at the starting area. Per-code overrides still apply. Resets on page reload.';
+        label.title = 'Use only when the NOR/SIs invoke A5.3 and check-ins represent boats at the starting area. Per-code overrides still apply. Remembered in this browser across page reloads.';
         const toggle = document.createElement('input');
         toggle.type = 'checkbox';
         toggle.id = 'rn-helper-a53';
         toggle.checked = useAppendixA53;
         toggle.addEventListener('change', () => {
             useAppendixA53 = toggle.checked;
+            saveSetting('useAppendixA53', useAppendixA53);
             for (const code of Object.keys(penaltyBasisDefaults)) {
                 penaltyBasisDefaults[code] = Object.hasOwn(penaltyBasisOverrides, code) && validBases.has(penaltyBasisOverrides[code])
                     ? penaltyBasisOverrides[code]
@@ -230,10 +250,11 @@
         toggle.checked = autoFocusQuickFind;
         toggle.addEventListener('change', () => {
             autoFocusQuickFind = toggle.checked;
+            saveSetting('autoFocusQuickFind', autoFocusQuickFind);
             cancelFocus();
         });
         label.append(toggle, ' Auto-focus Quick Find');
-        label.title = 'Return to Quick Find after scoring a boat. Turn off for corrections. Resets on page reload.';
+        label.title = 'Return to Quick Find after scoring a boat. Turn off for corrections. Remembered in this browser across page reloads.';
         placement.after(label);
     }
 
