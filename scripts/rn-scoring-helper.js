@@ -3,6 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      0.10
 // @description  Returns focus to Quick Find, sorts/filters penalty codes, and sets per-code penalty basis defaults.
+// @source       https://github.com/forestflammingo3/rn-scoring-helper
 // @author       Paul Leonard vibin w Gemini and ChatGPT
 // @match        https://www.regattanetwork.com/clubmgmt/mgmt_score_edit_beta.php?*
 // @grant        none
